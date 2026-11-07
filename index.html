@@ -55,7 +55,7 @@ footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);
 <section class="panel">
 <div class="searchrow"><input id="search" placeholder="Tìm chữ Hán, Pinyin, nghĩa tiếng Anh hoặc tiếng Việt…"><span id="counter" class="status"></span></div>
 <div id="words" class="wordgrid"></div>
-<div class="notice">Nghĩa tiếng Việt được tra từ CVDICT; câu ví dụ ưu tiên câu có ngữ cảnh và làm nổi bật từ đang học.</div>
+<div class="notice">Nghĩa tiếng Việt được tra từ CVDICT; mỗi từ có tối đa một câu ví dụ riêng, chọn theo đúng từ và ngữ cảnh. Nếu chưa có câu phù hợp, ứng dụng sẽ báo rõ thay vì tạo câu lặp.</div>
 </section>
 <aside class="panel preview">
 <div class="preview-head"><b>Nghe & luyện viết</b><span class="status">Rê vào từ để nghe</span></div>
@@ -67,14 +67,15 @@ footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);
 </div>
 </main>
 <div id="exampleTip" class="example-tip" role="tooltip"></div>
-<footer>Ứng dụng lưu danh sách từ, ví dụ, thư viện chuyển Pinyin, thư viện vẽ nét và dữ liệu nét đã tải trong IndexedDB. Cần tải dữ liệu một lần khi có Internet rồi bấm “Lưu dữ liệu nét & ví dụ offline”. Nguồn từ vựng: clem109/hsk-vocabulary (MIT); nghĩa tiếng Việt: CVDICT (CC BY-SA 4.0); ví dụ: dữ liệu từ vựng và câu dự phòng theo ngữ cảnh; thư viện nét: Hanzi Writer / Make Me a Hanzi.</footer>
+<footer>Ứng dụng lưu danh sách từ, câu ví dụ, thư viện Pinyin và dữ liệu nét trong IndexedDB. Hãy tải dữ liệu một lần khi có Internet rồi bấm “Lưu dữ liệu nét & ví dụ offline”. Nguồn từ vựng: clem109/hsk-vocabulary (MIT); nghĩa tiếng Việt: CVDICT (CC BY-SA 4.0); câu ví dụ: <a href="https://github.com/no7z/hsk-sentences-audio" target="_blank" rel="noopener">no7z/hsk-sentences-audio</a> (CC BY-SA 4.0, HSK 3.0), chọn câu có gắn nhãn đúng từ đang học; không tự ghép câu khuôn; thư viện nét: Hanzi Writer / Make Me a Hanzi.</footer>
 <script>
 const URLS={1:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-1.json',2:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-2.json',3:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-3.json',4:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-4.json'};
 const PINYIN_MODULE='https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js';
 const CHARBASE='https://raw.githubusercontent.com/chanind/hanzi-writer-data/master/data/';
 const CVDICT_URL='https://raw.githubusercontent.com/ph0ngp/CVDICT/main/CVDICT.u8';
+const SENTENCE_CORPUS_URL='https://raw.githubusercontent.com/no7z/hsk-sentences-audio/main/dist/sentences.json';
 const WRITER='https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.3/dist/hanzi-writer.min.js';
-let lists={1:[],2:[],3:[],4:[]},level=1,selected=null,writerReady=false,slow=false,hoverTimer=null,lastSpoken='',pinyinFn=null,tipTimer=null,tipWord=null,viDictionary=null;
+let lists={1:[],2:[],3:[],4:[]},level=1,selected=null,writerReady=false,slow=false,hoverTimer=null,lastSpoken='',pinyinFn=null,tipTimer=null,tipWord=null,viDictionary=null,exampleMap=null,exampleCorpusPromise=null;
 const $=id=>document.getElementById(id);
 function db(){return new Promise((resolve,reject)=>{let r=indexedDB.open('hsk-offline-v3',1);r.onupgradeneeded=()=>{let d=r.result;for(let s of ['cache','chars'])if(!d.objectStoreNames.contains(s))d.createObjectStore(s)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function getStore(store,key){let d=await db();return new Promise((res,rej)=>{let r=d.transaction(store).objectStore(store).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
@@ -97,7 +98,7 @@ async function loadLists(){
  }catch(e){$('overall').textContent='Không tải được dữ liệu. Kiểm tra kết nối Internet rồi thử lại. ('+e.message+')'}
  finally{$('loadBtn').disabled=false}
 }
-function render(){let q=$('search').value.trim().toLowerCase(),arr=lists[level].filter(w=>!q||[w.hanzi,w.pinyin,w.meaning,w.meaningVi].join(' ').toLowerCase().includes(q));$('counter').textContent=`${arr.length}/${lists[level].length}`;$('words').innerHTML=arr.map(w=>`<article class="word" data-id="${w.id}"><div class="hanzi">${esc(w.hanzi)}</div><div class="pinyin">${esc(w.pinyin)}</div><div class="meaning-en">EN: ${esc(w.meaning||'—')}</div><div class="meaning-vi">VI: ${esc(w.meaningVi||'Đang tra nghĩa…')}</div><div class="badge">HSK ${level}</div><div class="star-row"><button class="star-btn" title="Rê vào ngôi sao để xem câu ví dụ" aria-label="Câu ví dụ">☆</button></div></article>`).join('')||'<p>Chưa có dữ liệu. Bấm “Tải dữ liệu từ vựng”.</p>';
+function render(){let q=$('search').value.trim().toLowerCase(),arr=lists[level].filter(w=>!q||[w.hanzi,w.pinyin,w.meaning,w.meaningVi].join(' ').toLowerCase().includes(q));$('counter').textContent=`${arr.length}/${lists[level].length}`;$('words').innerHTML=arr.map(w=>`<article class="word" data-id="${w.id}"><div class="hanzi">${esc(w.hanzi)}</div><div class="pinyin">${esc(w.pinyin)}</div><div class="badge">HSK ${level}</div><div class="star-row"><button class="star-btn" title="Rê vào ngôi sao để xem câu ví dụ" aria-label="Câu ví dụ">☆</button></div></article>`).join('')||'<p>Chưa có dữ liệu. Bấm “Tải dữ liệu từ vựng”.</p>';
  document.querySelectorAll('.word').forEach(el=>{let w=arr.find(x=>x.id===el.dataset.id),star=el.querySelector('.star-btn');el.addEventListener('mouseenter',()=>{clearTimeout(hoverTimer);hoverTimer=setTimeout(()=>selectWord(w,true),180)});el.addEventListener('click',()=>selectWord(w,true));star.addEventListener('pointerenter',e=>{e.stopPropagation();showExample(w,star)});star.addEventListener('pointerleave',()=>scheduleHideTip());star.addEventListener('click',e=>{e.stopPropagation();showExample(w,star)});});
 }
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -113,39 +114,121 @@ async function getPinyinFn(){
  if(!window.pinyinPro||!window.pinyinPro.pinyin)throw Error('Không khởi tạo được bộ chuyển Pinyin');
  pinyinFn=window.pinyinPro.pinyin;return pinyinFn;
 }
-function hashText(s){let h=2166136261;for(const c of s){h^=c.codePointAt(0);h=Math.imul(h,16777619)}return h>>>0}
-function exampleFor(w){
- const valid=(w.examples||[]).filter(x=>(x.zh||x.chinese||'').includes(w.hanzi));
- if(valid.length){valid.sort((a,b)=>{const A=a.zh||a.chinese,B=b.zh||b.chinese;const score=t=>Math.abs((t.indexOf(w.hanzi)+w.hanzi.length/2)/Math.max(1,t.length)-.5);return score(A)-score(B)});const ex=valid[hashText(w.id)%Math.min(valid.length,Math.max(1,Math.ceil(valid.length/2)))];return {zh:ex.zh||ex.chinese,en:ex.en||ex.translation||'',pinyin:ex.pinyin||''}}
- // Câu mẫu có ngữ cảnh đa dạng, tránh lặp cùng một câu cho mọi từ.
- const templates=[
-  [`经过认真练习，我终于学会了${w.hanzi}的用法。`,`Sau khi luyện tập chăm chỉ, cuối cùng tôi đã biết cách dùng ${w.hanzi}.`],
-  [`老师用一个生活中的例子解释了${w.hanzi}。`,`Giáo viên dùng một ví dụ trong cuộc sống để giải thích ${w.hanzi}.`],
-  [`遇到困难时，朋友的一句话让我想起了${w.hanzi}。`,`Khi gặp khó khăn, một câu nói của bạn bè khiến tôi nhớ đến ${w.hanzi}.`],
-  [`为了准备考试，我把${w.hanzi}写进了自己的笔记。`,`Để chuẩn bị cho kỳ thi, tôi ghi ${w.hanzi} vào vở ghi chú.`],
-  [`这次旅行让我对${w.hanzi}有了更深的理解。`,`Chuyến đi lần này giúp tôi hiểu sâu hơn về ${w.hanzi}.`],
-  [`他先观察了很久，才发现${w.hanzi}真正重要的地方。`,`Anh ấy quan sát rất lâu rồi mới nhận ra điểm thực sự quan trọng của ${w.hanzi}.`],
-  [`如果你能正确使用${w.hanzi}，表达就会更自然。`,`Nếu bạn sử dụng ${w.hanzi} chính xác, cách diễn đạt sẽ tự nhiên hơn.`],
-  [`我们讨论这个问题时，大家都提到了${w.hanzi}。`,`Khi thảo luận vấn đề này, mọi người đều nhắc đến ${w.hanzi}.`],
-  [`我把今天学到的${w.hanzi}告诉了家人。`,`Tôi kể cho gia đình về ${w.hanzi} mà mình học hôm nay.`],
-  [`仔细比较以后，我发现${w.hanzi}和以前想的不一样。`,`Sau khi so sánh kỹ, tôi nhận ra ${w.hanzi} khác với điều mình từng nghĩ.`],
-  [`这本书通过一个故事，让我记住了${w.hanzi}。`,`Cuốn sách giúp tôi ghi nhớ ${w.hanzi} thông qua một câu chuyện.`],
-  [`生活中常常会遇到${w.hanzi}，所以值得认真学习。`,`Trong cuộc sống, ta thường gặp ${w.hanzi}, vì vậy rất đáng để học kỹ.`]
- ];
- const [zh,en]=templates[hashText(w.id)%templates.length];return {zh,en,pinyin:''};
+function sentenceTranslation(s,lang){
+ const t=s?.translation;
+ if(typeof t==='string')return lang==='en'?t:'';
+ if(t&&typeof t==='object')return t[lang]||'';
+ return s?.[lang]||'';
 }
-function highlightWord(sentence,word){
- let i=sentence.indexOf(word);if(i<0)return esc(sentence);
+function sourceExampleCandidates(w){
+ return (w.examples||[]).map(x=>{
+  if(typeof x==='string')return {zh:x,pinyin:'',en:'',vi:''};
+  const tr=x.translation;
+  return {zh:x.zh||x.chinese||'',pinyin:x.pinyin||'',en:x.en||(typeof tr==='string'?tr:tr?.en)||'',vi:x.vi||x.vietnamese||tr?.vi||''};
+ }).filter(x=>x.zh&&x.zh.includes(w.hanzi)&&[...x.zh].length>=5&&[...x.zh].length<=55);
+}
+function getSentenceTokens(s){return Array.isArray(s?.tokens)?s.tokens.map(t=>typeof t==='string'?{word:t,gloss_en:''}:{word:t?.word||'',gloss_en:t?.gloss_en||''}):[]}
+function meaningTerms(text){return String(text||'').toLowerCase().split(/[^a-z]+/).filter(x=>x.length>3&&!['with','from','that','this','have','used','into','there','they','them','for','the','and'].includes(x))}
+function sentenceScore(s,w,token){
+ const zh=s.chinese||s.zh||'',len=[...zh].length,corpusLevel=Number(s.hsk_level||s.level||4);
+ let score=110-Math.abs(len-18)*2;
+ if(len<7)score-=20;if(len>38)score-=(len-38)*3;
+ // Ưu tiên câu có cấp độ gần với người học, nhưng vẫn nhận câu HSK thấp hơn.
+ if(corpusLevel<=w.level)score+=20;else score-=Math.min(24,(corpusLevel-w.level)*6);
+ const gloss=String(token?.gloss_en||'').toLowerCase();
+ const terms=meaningTerms(w.meaning);
+ if(gloss&&terms.some(x=>gloss.includes(x)||x.includes(gloss)))score+=16;
+ if(sentenceTranslation(s,'en'))score+=5;
+ if(/[。！？!?]$/.test(zh))score+=3;
+ return score;
+}
+function sentenceKey(zh){return String(zh||'').replace(/[，。！？、,.!?\s]/g,'').trim()}
+function findTokenOffset(sentence,word){
+ const zh=sentence.chinese||sentence.zh||'';let cursor=0;
+ for(const token of getSentenceTokens(sentence)){const at=zh.indexOf(token.word,cursor);if(at<0)continue;if(token.word===word)return at;cursor=at+token.word.length;}
+ return zh.indexOf(word);
+}
+function buildUniqueExampleMap(corpus){
+ const all=[1,2,3,4].flatMap(l=>lists[l]),candidates=new Map();
+ for(const w of all){
+  const found=[];
+  for(const sentence of corpus){
+   const zh=sentence.chinese||sentence.zh||'';
+   if(!zh||!zh.includes(w.hanzi)||[...zh].length<5||[...zh].length>55)continue;
+   const token=getSentenceTokens(sentence).find(t=>t.word===w.hanzi);
+   // Chỉ nhận câu khi từ xuất hiện như một đơn vị từ vựng, không ghép nhầm chữ nằm trong từ khác.
+   if(!token)continue;
+   found.push({sentence,score:sentenceScore(sentence,w,token)});
+  }
+  candidates.set(w.id,found.sort((a,b)=>b.score-a.score));
+ }
+ // Phân câu cho những từ ít lựa chọn trước; mỗi câu chỉ được dùng cho một từ.
+ const ordered=[...all].sort((a,b)=>(candidates.get(a.id).length-candidates.get(b.id).length)||(a.level-b.level));
+ const used=new Set(),assigned=new Map();
+ for(const w of ordered){
+  const options=candidates.get(w.id)||[];
+  const picked=options.find(x=>!used.has(sentenceKey(x.sentence.chinese||x.sentence.zh)));
+  if(!picked)continue;
+  const sentence=picked.sentence,zh=sentence.chinese||sentence.zh,key=sentenceKey(zh);
+  used.add(key);
+  assigned.set(w.id,{zh,start:findTokenOffset(sentence,w.hanzi),pinyin:sentence.pinyin||'',en:sentenceTranslation(sentence,'en'),vi:sentenceTranslation(sentence,'vi'),source:'HSK-graded sentence corpus'});
+ }
+ // Nếu bộ câu chính không có câu cho từ này, dùng ví dụ gốc đi kèm mục từ; không tự tạo câu khuôn.
+ for(const w of all){
+  if(assigned.has(w.id))continue;
+  const fallback=sourceExampleCandidates(w).sort((a,b)=>Math.abs([...a.zh].length-18)-Math.abs([...b.zh].length-18));
+  const picked=fallback.find(x=>!used.has(sentenceKey(x.zh)));
+  if(picked){used.add(sentenceKey(picked.zh));assigned.set(w.id,{...picked,start:picked.zh.indexOf(w.hanzi),source:'vocabulary source example'})}
+ }
+ return assigned;
+}
+async function loadSentenceExamples(){
+ if(exampleMap)return exampleMap;
+ if(exampleCorpusPromise)return exampleCorpusPromise;
+ exampleCorpusPromise=(async()=>{
+  let corpus=await getStore('cache','hsk-sentence-corpus-v1');
+  if(!corpus){
+   try{
+    const r=await fetch(SENTENCE_CORPUS_URL);
+    if(!r.ok)throw Error('HTTP '+r.status);
+    const data=await r.json();
+    corpus=Array.isArray(data)?data:(data.sentences||data.data||[]);
+    if(!Array.isArray(corpus)||!corpus.length)throw Error('Bộ câu ví dụ không đúng định dạng');
+    await putStore('cache','hsk-sentence-corpus-v1',corpus);
+   }catch(e){
+    // Cho phép thử tải lại ở lần rê chuột sau; chỉ dùng ví dụ gốc nếu hiện đang offline.
+    exampleCorpusPromise=null;
+    return buildUniqueExampleMap([]);
+   }
+  }
+  exampleMap=buildUniqueExampleMap(Array.isArray(corpus)?corpus:[]);
+  return exampleMap;
+ })().catch(e=>{exampleCorpusPromise=null;throw e});
+ return exampleCorpusPromise;
+}
+async function exampleFor(w){
+ const map=await loadSentenceExamples();return map.get(w.id)||null;
+}
+function highlightWord(sentence,word,preferredIndex){
+ let i=Number.isInteger(preferredIndex)&&sentence.slice(preferredIndex,preferredIndex+word.length)===word?preferredIndex:sentence.indexOf(word);if(i<0)return esc(sentence);
  return esc(sentence.slice(0,i))+'<span class="hit">'+esc(word)+'</span>'+esc(sentence.slice(i+word.length));
 }
 async function showExample(w,anchor){
- clearTimeout(tipTimer);tipWord=w;let ex=exampleFor(w),tip=$('exampleTip');
- tip.innerHTML=`<div class="example-zh" title="Rê chuột vào câu để nghe">${highlightWord(ex.zh,w.hanzi)}</div><div class="example-pinyin" id="tipPinyin">${esc(ex.pinyin||'Đang tạo Pinyin…')}</div>${ex.en?`<div class="example-en">${esc(ex.en)}</div>`:''}`;
- let r=anchor.getBoundingClientRect(),width=Math.min(360,window.innerWidth-28),left=Math.min(Math.max(10,r.left),window.innerWidth-width-10),top=r.bottom+7;
- tip.style.left=left+'px';tip.style.top=Math.min(top,window.innerHeight-180)+'px';tip.classList.add('show');
+ clearTimeout(tipTimer);tipWord=w;const tip=$('exampleTip');
+ tip.innerHTML=`<div class="example-zh">Đang tìm một câu ví dụ đúng ngữ cảnh cho <span class="hit">${esc(w.hanzi)}</span>…</div><div class="example-pinyin">Đang tải dữ liệu câu ví dụ lần đầu.</div>`;
+ const position=()=>{let r=anchor.getBoundingClientRect(),width=Math.min(360,window.innerWidth-28),left=Math.min(Math.max(10,r.left),window.innerWidth-width-10),top=r.bottom+7;tip.style.left=left+'px';tip.style.top=Math.min(top,window.innerHeight-180)+'px'};
+ position();tip.classList.add('show');
  tip.onpointerenter=()=>clearTimeout(tipTimer);tip.onpointerleave=()=>scheduleHideTip();
- let sentence=tip.querySelector('.example-zh');sentence.onpointerenter=()=>{if(lastSpoken!==ex.zh)speak(ex.zh)};
- if(!ex.pinyin){try{let py=await getPinyinFn();let result=py(ex.zh,{toneType:'symbol',type:'string'});if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent=result;ex.pinyin=result;}catch(e){if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent='Pinyin sẽ được tạo khi có kết nối Internet.'}}
+ try{
+  const ex=await exampleFor(w);
+  if(tipWord!==w||!tip.classList.contains('show'))return;
+  if(!ex){tip.innerHTML=`<div class="example-zh">Chưa tìm được câu phù hợp cho <span class="hit">${esc(w.hanzi)}</span>.</div><div class="example-pinyin">Mình không hiển thị câu mẫu chung để tránh làm bạn học sai nghĩa.</div>`;return}
+  tip.innerHTML=`<div class="example-zh" title="Rê chuột vào câu để nghe">${highlightWord(ex.zh,w.hanzi,ex.start)}</div><div class="example-pinyin" id="tipPinyin">${esc(ex.pinyin||'Đang tạo Pinyin…')}</div>${ex.vi?`<div class="example-en" style="color:#14845d;font-size:13px">${esc(ex.vi)}</div>`:''}${ex.en?`<div class="example-en">${esc(ex.en)}</div>`:''}`;
+  const sentence=tip.querySelector('.example-zh');sentence.onpointerenter=()=>{if(lastSpoken!==ex.zh)speak(ex.zh)};
+  if(!ex.pinyin){try{let py=await getPinyinFn();let result=py(ex.zh,{toneType:'symbol',type:'string'});if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent=result;ex.pinyin=result;}catch(e){if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent='Pinyin chưa tải được; hãy thử khi có Internet.'}}
+ }catch(e){
+  if(tipWord===w&&tip.classList.contains('show'))tip.innerHTML=`<div class="example-zh">Chưa tải được câu ví dụ cho <span class="hit">${esc(w.hanzi)}</span>.</div><div class="example-pinyin">Hãy kết nối Internet và rê lại vào ngôi sao. Sau khi tải, câu sẽ được lưu để dùng offline.</div>`;
+ }
 }
 function scheduleHideTip(){clearTimeout(tipTimer);tipTimer=setTimeout(()=>{$('exampleTip').classList.remove('show');tipWord=null},280)}
 
@@ -156,7 +239,7 @@ async function selectWord(w,autoSpeak=true){if(!w)return;selected=w;$('previewWo
  if(selected===w)$('strokeStatus').textContent=`Hoàn tất ${chars.length} chữ · tốc độ 70%`;
  }catch(e){$('strokeGrid').innerHTML='<div class="notice">Không tải được dữ liệu nét. Cần kết nối Internet lần đầu cho ký tự này, sau đó dữ liệu sẽ được lưu offline.</div>';$('strokeStatus').textContent=e.message}}
 function replay(){if(!selected)return;selectWord(selected,false)}
-async function cacheAll(){if(!lists[1].length){await loadLists()}let chars=[...new Set([1,2,3,4].flatMap(l=>lists[l].flatMap(w=>[...w.hanzi])).filter(c=>/\p{Script=Han}/u.test(c)))];$('cacheBtn').disabled=true;try{await loadWriter();await getPinyinFn();let done=0,failed=[];for(let i=0;i<chars.length;i+=5){await Promise.all(chars.slice(i,i+5).map(async c=>{try{await getChar(c)}catch(e){failed.push(c)}finally{done++}}));$('overall').textContent=`Đang lưu dữ liệu nét: ${done}/${chars.length}`}$('overall').textContent=`Đã lưu ${done-failed.length}/${chars.length} ký tự nét vào máy.${failed.length?' Thiếu: '+failed.join(' '):' Có thể học offline.'}`}catch(e){$('overall').textContent='Không thể lưu: '+e.message}finally{$('cacheBtn').disabled=false}}
+async function cacheAll(){if(!lists[1].length){await loadLists()}let exampleInfo='';try{const examples=await loadSentenceExamples(),total=[1,2,3,4].reduce((n,l)=>n+lists[l].length,0);exampleInfo=` · Câu ví dụ: ${examples.size}/${total} từ`}catch(e){exampleInfo=' · Chưa tải được bộ câu ví dụ'}let chars=[...new Set([1,2,3,4].flatMap(l=>lists[l].flatMap(w=>[...w.hanzi])).filter(c=>/\p{Script=Han}/u.test(c)))];$('cacheBtn').disabled=true;try{await loadWriter();await getPinyinFn();let done=0,failed=[];for(let i=0;i<chars.length;i+=5){await Promise.all(chars.slice(i,i+5).map(async c=>{try{await getChar(c)}catch(e){failed.push(c)}finally{done++}}));$('overall').textContent=`Đang lưu dữ liệu nét: ${done}/${chars.length}`}$('overall').textContent=`Đã lưu ${done-failed.length}/${chars.length} ký tự nét vào máy.${failed.length?' Thiếu: '+failed.join(' '):' Có thể học offline.'}${exampleInfo}`}catch(e){$('overall').textContent='Không thể lưu: '+e.message}finally{$('cacheBtn').disabled=false}}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');level=Number(b.dataset.level);render();if(lists[level][0])selectWord(lists[level][0],false)});
 $('search').oninput=render;$('stopBtn').onclick=()=>speechSynthesis.cancel();$('replayBtn').onclick=replay;$('loadBtn').onclick=loadLists;$('cacheBtn').onclick=cacheAll;
 function boot(){loadLists().catch(()=>{})}boot();

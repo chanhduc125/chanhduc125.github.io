@@ -9,21 +9,21 @@ CÁCH DÙNG
 1. Giải nén ZIP, mở index.html bằng Chrome/Edge.
 2. Lần đầu cần Internet để tải danh sách HSK 1–4, thư viện Hanzi Writer, dữ liệu nét chữ và bộ chuyển Pinyin.
 3. Chọn tab HSK 1/2/3/4. Rê vào thẻ từ để nghe phát âm và xem nét chữ.
-4. Rê vào ngôi sao ☆ bên dưới mỗi từ để mở câu ví dụ. Từ đang học được tô đỏ đậm; Pinyin nằm ngay dưới.
-5. Rê vào nút loa hoặc nhấn nút để nghe câu ví dụ.
-6. Bấm “Lưu dữ liệu nét & ví dụ offline” để lưu thư viện và dữ liệu nét đã tải trong IndexedDB. Mỗi ký tự phải được tải ít nhất một lần trước khi dùng offline.
+4. Rê vào ngôi sao ☆ bên dưới mỗi từ để mở một câu ví dụ riêng. Từ đang học được tô đỏ đậm; Pinyin nằm ngay dưới; rê vào câu để tự đọc.
+5. Bấm “Lưu dữ liệu nét & ví dụ offline” để lưu bộ câu, thư viện Pinyin và dữ liệu nét vào IndexedDB. Mỗi ký tự phải được tải ít nhất một lần trước khi dùng offline.
 
-VÍ DỤ
-Dữ liệu clem109/hsk-vocabulary cung cấp ví dụ cho một số mục. Nếu từ chưa có ví dụ trong nguồn, ứng dụng tạo câu ghi nhớ dạng “我今天学习‘词’这个词。” (Hôm nay tôi học từ “词” này.) và tự tạo Pinyin bằng pinyin-pro. Phần câu mẫu này là câu hỗ trợ ghi nhớ, không phải câu ngữ cảnh từ sách giáo khoa. Với từ có ví dụ nguồn, dùng câu nguồn và tiếng Anh nếu có.
+CÂU VÍ DỤ
+Ứng dụng chọn tối đa một câu có ngữ cảnh cho từng từ, ưu tiên bộ câu tiếng Trung có phân tách từ vựng và nghĩa từng từ; mỗi câu chỉ gán cho một mục từ để tránh lặp lại và tô đỏ đúng vị trí từ đang học. Nếu bộ dữ liệu câu và ví dụ gốc không có câu phù hợp, ứng dụng sẽ báo chưa có câu thay vì ghép từ vào câu mẫu chung. Bộ câu chính được tải online lần đầu và lưu trong IndexedDB để dùng offline sau khi đã tải.
 
 PHÁT ÂM
 Sử dụng SpeechSynthesis zh-CN của hệ điều hành. Muốn nghe offline cần cài giọng tiếng Trung trên máy. Trình duyệt không có giọng zh-CN sẽ không thể đọc.
 
 NGUỒN & GIẤY PHÉP
-- Từ vựng / ví dụ: https://github.com/clem109/hsk-vocabulary (MIT)
+- Từ vựng: https://github.com/clem109/hsk-vocabulary (MIT)
+- Câu ví dụ: https://github.com/no7z/hsk-sentences-audio (bộ câu HSK 3.0, CC BY-SA 4.0); ứng dụng chọn các câu có token khớp chính xác với từ HSK 2.0 đang học.
 - Nét chữ: https://github.com/chanind/hanzi-writer-data ; https://github.com/skishore/makemeahanzi (Arphic Public License)
 - Engine: https://github.com/chanind/hanzi-writer (MIT)
 - Pinyin: https://github.com/zh-lx/pinyin-pro (MIT)
 
 LƯU Ý
-Dữ liệu từ vựng tải từ các tệp JSON raw trên GitHub ở lần chạy đầu. Ứng dụng cache cục bộ trong IndexedDB. Không dùng HSK 3.0; các tab đều là HSK 2.0.
+Dữ liệu từ vựng tải từ các tệp JSON raw trên GitHub ở lần chạy đầu. Ứng dụng cache cục bộ trong IndexedDB. Danh sách từ vựng hiển thị vẫn là HSK 2.0. Nguồn câu ví dụ phụ trợ được chấm theo HSK 3.0, vì vậy một số từ riêng của danh sách HSK 2.0 có thể chưa có câu khớp phù hợp.
