@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HSK 2.0 · Từ vựng, ví dụ và luyện nét</title>
+<style>
+:root{--bg:#f4f7fb;--panel:#fff;--ink:#18253b;--muted:#718096;--blue:#2764d8;--line:#e3eaf4;--soft:#edf3ff;--green:#14845d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{background:linear-gradient(120deg,#153b77,#3479e5);color:white;padding:22px max(18px,calc((100vw - 1220px)/2))}
+header h1{margin:0;font-size:clamp(23px,4vw,32px)}header p{margin:5px 0 0;color:#dce8ff}
+main{max-width:1220px;margin:20px auto;padding:0 16px}
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+button,input{font:inherit}button{border:0;border-radius:10px;padding:10px 13px;background:#e8eef8;color:#244064;font-weight:650;cursor:pointer}button.primary{background:var(--blue);color:#fff}button:disabled{opacity:.5;cursor:wait}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px}.tab{padding:11px 18px}.tab.active{background:var(--blue);color:white}
+.tab small{display:block;font-size:11px;font-weight:500;opacity:.8}
+.layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.8fr);gap:14px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 4px 16px #1b355508}
+.searchrow{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px}.searchrow input{flex:1;min-width:200px;padding:11px;border:1px solid var(--line);border-radius:10px}
+.wordgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;max-height:70vh;overflow:auto;padding:2px}
+.word{border:1px solid var(--line);border-radius:12px;padding:11px;background:white;cursor:pointer;transition:.13s;min-height:105px}
+.word:hover,.word.selected{border-color:#7da5ef;background:#f4f8ff;transform:translateY(-1px)}
+.hanzi{font-size:29px;font-weight:750;line-height:1.25}.pinyin{color:var(--blue);font-weight:650;margin:4px 0}.meaning{font-size:12px;color:#526176;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.badge{font-size:10px;color:#61718a;margin-top:7px}
+.word{position:relative}
+.star-row{display:flex;justify-content:flex-end;margin-top:5px}
+.star-btn{background:transparent;border:0;padding:1px 5px;color:#d19a16;font-size:17px;line-height:1;cursor:help}
+.star-btn:hover{color:#a66b00;transform:scale(1.15)}
+.example-tip{position:fixed;z-index:9999;display:none;width:min(360px,calc(100vw - 28px));background:#fff;border:1px solid #d8e2f0;border-radius:13px;box-shadow:0 12px 34px #142b4b2b;padding:13px;color:#1b2a41}
+.example-tip.show{display:block}
+.example-zh{font-size:18px;line-height:1.7;font-weight:650;cursor:help}.example-zh .hit{color:#c00018;font-size:1.18em;font-weight:900}
+.example-pinyin{margin-top:6px;color:#2764d8;font-size:13px;line-height:1.5}
+.example-en{margin-top:6px;color:#6b778a;font-size:12px}
+.example-audio{display:none}
+@media(max-width:820px){.example-tip{width:min(330px,calc(100vw - 20px))}}
+
+.preview{position:sticky;top:12px}.preview-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.preview-word{font-size:44px;font-weight:750;text-align:center;margin:12px 0 0}.preview-pinyin{text-align:center;color:var(--blue);font-size:18px;font-weight:700}.preview-meaning{text-align:center;color:#596a80;min-height:38px;margin:5px 0 10px}
+.strokegrid{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.strokechar{background:#f2f6fc;border:1px solid #dfe8f5;border-radius:12px;padding:6px;width:116px;text-align:center}.strokechar .canvas{height:112px;width:100%}.strokechar small{color:var(--muted)}
+.status{font-size:12px;color:var(--muted);margin-top:9px;min-height:20px}.notice{background:#fff8e8;border:1px solid #f0dfb4;border-radius:12px;padding:11px;color:#76591b;font-size:13px;margin-top:12px}
+footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);font-size:12px}
+@media(max-width:820px){.layout{grid-template-columns:1fr}.preview{position:static;order:-1}.wordgrid{max-height:52vh}.strokechar{width:100px}.strokechar .canvas{height:96px}}
+</style></head><body>
+<header><h1>汉语 HSK 2.0 · Học từ vựng & thứ tự nét</h1><p>HSK 1–4 · Rê chuột vào ngôi sao để xem câu ví dụ; rê vào câu để nghe</p></header>
+<main>
+<div class="toolbar">
+<button class="primary" id="loadBtn">☁ Tải dữ liệu từ vựng</button>
+<button id="cacheBtn">⬇ Lưu dữ liệu nét & ví dụ offline</button>
+<button id="stopBtn">■ Dừng đọc</button>
+<span id="overall" class="status">Chưa tải danh sách đầy đủ. Cần Internet ở lần tải đầu tiên.</span>
+</div>
+<nav class="tabs">
+<button class="tab active" data-level="1">HSK 1<small>150 từ</small></button>
+<button class="tab" data-level="2">HSK 2<small>150 từ</small></button>
+<button class="tab" data-level="3">HSK 3<small>300 từ</small></button>
+<button class="tab" data-level="4">HSK 4<small>598 từ</small></button>
+</nav>
+<div class="layout">
+<section class="panel">
+<div class="searchrow"><input id="search" placeholder="Tìm chữ Hán, Pinyin hoặc nghĩa tiếng Anh…"><span id="counter" class="status"></span></div>
+<div id="words" class="wordgrid"></div>
+<div class="notice">Nguồn danh sách: Danh sách HSK 2.0 từ kho clem109/hsk-vocabulary. Câu ví dụ dùng ví dụ có sẵn trong dữ liệu; mục chưa có ví dụ dùng câu mẫu học từ. Nghĩa gốc tiếng Anh.</div>
+</section>
+<aside class="panel preview">
+<div class="preview-head"><b>Nghe & luyện viết</b><span class="status">Rê vào từ để nghe</span></div>
+<div id="previewWord" class="preview-word">你好</div><div id="previewPinyin" class="preview-pinyin">nǐ hǎo</div><div id="previewMeaning" class="preview-meaning">Xin chào</div>
+<div class="strokegrid" id="strokeGrid"><div class="strokechar"><div class="canvas" style="display:grid;place-items:center;font-size:70px">字</div><small>Chọn từ để xem nét</small></div></div>
+<div class="toolbar" style="margin:12px 0 0"><button id="replayBtn">↻ Chạy lại nét</button></div>
+<div id="strokeStatus" class="status">Hoạt ảnh sử dụng dữ liệu nét chữ mở của Hanzi Writer / Make Me a Hanzi.</div>
+</aside>
+</div>
+</main>
+<div id="exampleTip" class="example-tip" role="tooltip"></div>
+<footer>Ứng dụng lưu danh sách từ, ví dụ, thư viện chuyển Pinyin, thư viện vẽ nét và dữ liệu nét đã tải trong IndexedDB. Cần tải dữ liệu một lần khi có Internet rồi bấm “Lưu dữ liệu nét & ví dụ offline”. Nguồn từ vựng và ví dụ: clem109/hsk-vocabulary (MIT); thư viện nét: Hanzi Writer / Make Me a Hanzi. Ví dụ dự phòng được tạo dạng câu học từ khi mục từ chưa có ví dụ trong nguồn.</footer>
+<script>
+const URLS={1:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-1.json',2:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-2.json',3:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-3.json',4:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-4.json'};
+const PINYIN_MODULE='https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js';
+const CHARBASE='https://raw.githubusercontent.com/chanind/hanzi-writer-data/master/data/';
+const WRITER='https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.3/dist/hanzi-writer.min.js';
+let lists={1:[],2:[],3:[],4:[]},level=1,selected=null,writerReady=false,slow=false,hoverTimer=null,lastSpoken='',pinyinFn=null,tipTimer=null,tipWord=null;
+const $=id=>document.getElementById(id);
+function db(){return new Promise((resolve,reject)=>{let r=indexedDB.open('hsk-offline-v3',1);r.onupgradeneeded=()=>{let d=r.result;for(let s of ['cache','chars'])if(!d.objectStoreNames.contains(s))d.createObjectStore(s)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function getStore(store,key){let d=await db();return new Promise((res,rej)=>{let r=d.transaction(store).objectStore(store).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function putStore(store,key,val){let d=await db();return new Promise((res,rej)=>{let r=d.transaction(store,'readwrite').objectStore(store).put(val,key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
+async function fetchJSON(url){let r=await fetch(url);if(!r.ok)throw Error('HTTP '+r.status);return r.json()}
+function normalize(raw,lv){return raw.map((x,i)=>({id:`${lv}-${i}`,level:lv,hanzi:x.hanzi||x.simplified||'',pinyin:x.pinyin||x.transcription||'',meaning:(x.translations||x.meanings||[]).slice(0,3).join('; '),pos:x.pos||'',examples:x.examples||[]})).filter(x=>x.hanzi)}
+async function loadLists(){
+ $('loadBtn').disabled=true;$('overall').textContent='Đang tải dữ liệu HSK 2.0 cấp 1–4…';
+ try{
+  for(let lv=1;lv<=4;lv++){let cached=await getStore('cache','vocab-'+lv);if(cached)lists[lv]=cached;else{let raw=await fetchJSON(URLS[lv]);lists[lv]=normalize(raw,lv);await putStore('cache','vocab-'+lv,lists[lv])}}
+  $('overall').textContent=`Đã tải HSK 1–4: ${[1,2,3,4].map(l=>lists[l].length).join(' + ')} = ${[1,2,3,4].reduce((n,l)=>n+lists[l].length,0)} mục từ.`;
+  render();if(!selected&&lists[1][0])selectWord(lists[1][0],false);
+ }catch(e){$('overall').textContent='Không tải được dữ liệu. Kiểm tra kết nối Internet rồi thử lại. ('+e.message+')'}
+ finally{$('loadBtn').disabled=false}
+}
+function render(){let q=$('search').value.trim().toLowerCase(),arr=lists[level].filter(w=>!q||[w.hanzi,w.pinyin,w.meaning].join(' ').toLowerCase().includes(q));$('counter').textContent=`${arr.length}/${lists[level].length}`;$('words').innerHTML=arr.map(w=>`<article class="word" data-id="${w.id}"><div class="hanzi">${esc(w.hanzi)}</div><div class="pinyin">${esc(w.pinyin)}</div><div class="meaning">${esc(w.meaning)}</div><div class="badge">HSK ${level}</div><div class="star-row"><button class="star-btn" title="Rê vào ngôi sao để xem câu ví dụ" aria-label="Câu ví dụ">☆</button></div></article>`).join('')||'<p>Chưa có dữ liệu. Bấm “Tải dữ liệu từ vựng”.</p>';
+ document.querySelectorAll('.word').forEach(el=>{let w=arr.find(x=>x.id===el.dataset.id),star=el.querySelector('.star-btn');el.addEventListener('mouseenter',()=>{clearTimeout(hoverTimer);hoverTimer=setTimeout(()=>selectWord(w,true),180)});el.addEventListener('click',()=>selectWord(w,true));star.addEventListener('pointerenter',e=>{e.stopPropagation();showExample(w,star)});star.addEventListener('pointerleave',()=>scheduleHideTip());star.addEventListener('click',e=>{e.stopPropagation();showExample(w,star)});});
+}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function loadWriter(){if(window.HanziWriter)return;let code=await getStore('cache','writer-js');if(!code){let r=await fetch(WRITER);if(!r.ok)throw Error('Không tải được Hanzi Writer');code=await r.text();await putStore('cache','writer-js',code)}let blob=new Blob([code],{type:'text/javascript'}),url=URL.createObjectURL(blob);await new Promise((res,rej)=>{let s=document.createElement('script');s.src=url;s.onload=res;s.onerror=rej;document.head.appendChild(s)});writerReady=!!window.HanziWriter}
+async function getChar(char){let cached=await getStore('chars',char);if(cached)return cached;let r=await fetch(CHARBASE+encodeURIComponent(char)+'.json');if(!r.ok)throw Error('Thiếu dữ liệu nét: '+char);let data=await r.json();await putStore('chars',char,data);return data}
+function speak(text){if(!('speechSynthesis'in window)){$('strokeStatus').textContent='Trình duyệt này không hỗ trợ đọc tự động.';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(text);u.lang='zh-CN';u.rate=.86;let vs=speechSynthesis.getVoices(),v=vs.find(x=>x.lang.toLowerCase().startsWith('zh-cn'))||vs.find(x=>x.lang.toLowerCase().startsWith('zh'));if(v)u.voice=v;speechSynthesis.speak(u);lastSpoken=text}
+async function getPinyinFn(){
+ if(pinyinFn)return pinyinFn;
+ let code=await getStore('cache','pinyin-pro-js');
+ if(!code){let r=await fetch(PINYIN_MODULE);if(!r.ok)throw Error('Không tải được bộ chuyển Pinyin');code=await r.text();await putStore('cache','pinyin-pro-js',code)}
+ let blob=new Blob([code],{type:'text/javascript'}),url=URL.createObjectURL(blob);
+ await new Promise((resolve,reject)=>{let s=document.createElement('script');s.src=url;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
+ if(!window.pinyinPro||!window.pinyinPro.pinyin)throw Error('Không khởi tạo được bộ chuyển Pinyin');
+ pinyinFn=window.pinyinPro.pinyin;return pinyinFn;
+}
+function hashText(s){let h=2166136261;for(const c of s){h^=c.codePointAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function exampleFor(w){
+ const valid=(w.examples||[]).filter(x=>(x.zh||x.chinese||'').includes(w.hanzi));
+ if(valid.length){const ex=valid[hashText(w.id)%valid.length];return {zh:ex.zh||ex.chinese,en:ex.en||ex.translation||'',pinyin:ex.pinyin||''}}
+ // Câu mẫu có ngữ cảnh đa dạng, tránh lặp cùng một câu cho mọi từ.
+ const templates=[
+  [`我每天都要用${w.hanzi}。`,`Tôi đều dùng ${w.hanzi} mỗi ngày.`],
+  [`请把${w.hanzi}放在这里。`,`Vui lòng đặt ${w.hanzi} ở đây.`],
+  [`老师今天教我们${w.hanzi}。`,`Hôm nay giáo viên dạy chúng tôi ${w.hanzi}.`],
+  [`我觉得${w.hanzi}很重要。`,`Tôi cảm thấy ${w.hanzi} rất quan trọng.`],
+  [`他刚才说了${w.hanzi}。`,`Vừa rồi anh ấy đã nói ${w.hanzi}.`],
+  [`我们明天一起去看${w.hanzi}。`,`Ngày mai chúng ta cùng đi xem ${w.hanzi}.`],
+  [`这个${w.hanzi}怎么用？`,`Từ/vật ${w.hanzi} này dùng thế nào?`],
+  [`妈妈让我记住${w.hanzi}。`,`Mẹ bảo tôi ghi nhớ ${w.hanzi}.`],
+  [`我在书上看到${w.hanzi}。`,`Tôi nhìn thấy ${w.hanzi} trong sách.`],
+  [`如果有${w.hanzi}，请告诉我。`,`Nếu có ${w.hanzi}, hãy nói cho tôi biết.`]
+ ];
+ const [zh,en]=templates[hashText(w.id)%templates.length];return {zh,en,pinyin:''};
+}
+function highlightWord(sentence,word){
+ let i=sentence.indexOf(word);if(i<0)return esc(sentence);
+ return esc(sentence.slice(0,i))+'<span class="hit">'+esc(word)+'</span>'+esc(sentence.slice(i+word.length));
+}
+async function showExample(w,anchor){
+ clearTimeout(tipTimer);tipWord=w;let ex=exampleFor(w),tip=$('exampleTip');
+ tip.innerHTML=`<div class="example-zh" title="Rê chuột vào câu để nghe">${highlightWord(ex.zh,w.hanzi)}</div><div class="example-pinyin" id="tipPinyin">${esc(ex.pinyin||'Đang tạo Pinyin…')}</div>${ex.en?`<div class="example-en">${esc(ex.en)}</div>`:''}`;
+ let r=anchor.getBoundingClientRect(),width=Math.min(360,window.innerWidth-28),left=Math.min(Math.max(10,r.left),window.innerWidth-width-10),top=r.bottom+7;
+ tip.style.left=left+'px';tip.style.top=Math.min(top,window.innerHeight-180)+'px';tip.classList.add('show');
+ tip.onpointerenter=()=>clearTimeout(tipTimer);tip.onpointerleave=()=>scheduleHideTip();
+ let sentence=tip.querySelector('.example-zh');sentence.onpointerenter=()=>{if(lastSpoken!==ex.zh)speak(ex.zh)};
+ if(!ex.pinyin){try{let py=await getPinyinFn();let result=py(ex.zh,{toneType:'symbol',type:'string'});if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent=result;ex.pinyin=result;}catch(e){if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent='Pinyin sẽ được tạo khi có kết nối Internet.'}}
+}
+function scheduleHideTip(){clearTimeout(tipTimer);tipTimer=setTimeout(()=>{$('exampleTip').classList.remove('show');tipWord=null},280)}
+
+async function selectWord(w,autoSpeak=true){if(!w)return;selected=w;$('previewWord').textContent=w.hanzi;$('previewPinyin').textContent=w.pinyin;$('previewMeaning').textContent=w.meaning||'Chưa có nghĩa trong từ điển nguồn';if(autoSpeak)speak(w.hanzi);$('strokeGrid').innerHTML='';$('strokeStatus').textContent='Đang chuẩn bị hoạt ảnh…';
+ try{await loadWriter();let chars=[...w.hanzi].filter(c=>/\p{Script=Han}/u.test(c));let jobs=[];for(let i=0;i<chars.length;i++){let c=chars[i],box=document.createElement('div');box.className='strokechar';box.innerHTML=`<div class="canvas"></div><small>${esc(c)} · ${i+1}/${chars.length}</small>`;$('strokeGrid').appendChild(box);let target=box.querySelector('.canvas');let cw=HanziWriter.create(target,c,{width:104,height:104,padding:4,showOutline:true,strokeAnimationSpeed:.7,delayBetweenStrokes:100,charDataLoader:(ch,done)=>getChar(ch).then(done).catch(err=>{$('strokeStatus').textContent=err.message})});jobs.push({writer:cw,char:c,index:i+1});box._writer=cw}
+ $('strokeStatus').textContent=`Đang luyện ${chars.length} chữ theo thứ tự…`;
+ for(const job of jobs){if(selected!==w)return;$('strokeStatus').textContent=`Đang viết chữ ${job.index}/${jobs.length}: ${job.char}`;await new Promise(resolve=>job.writer.animateCharacter({onComplete:resolve}));}
+ if(selected===w)$('strokeStatus').textContent=`Hoàn tất ${chars.length} chữ · tốc độ 70%`;
+ }catch(e){$('strokeGrid').innerHTML='<div class="notice">Không tải được dữ liệu nét. Cần kết nối Internet lần đầu cho ký tự này, sau đó dữ liệu sẽ được lưu offline.</div>';$('strokeStatus').textContent=e.message}}
+function replay(){if(!selected)return;selectWord(selected,false)}
+async function cacheAll(){if(!lists[1].length){await loadLists()}let chars=[...new Set([1,2,3,4].flatMap(l=>lists[l].flatMap(w=>[...w.hanzi])).filter(c=>/\p{Script=Han}/u.test(c)))];$('cacheBtn').disabled=true;try{await loadWriter();await getPinyinFn();let done=0,failed=[];for(let i=0;i<chars.length;i+=5){await Promise.all(chars.slice(i,i+5).map(async c=>{try{await getChar(c)}catch(e){failed.push(c)}finally{done++}}));$('overall').textContent=`Đang lưu dữ liệu nét: ${done}/${chars.length}`}$('overall').textContent=`Đã lưu ${done-failed.length}/${chars.length} ký tự nét vào máy.${failed.length?' Thiếu: '+failed.join(' '):' Có thể học offline.'}`}catch(e){$('overall').textContent='Không thể lưu: '+e.message}finally{$('cacheBtn').disabled=false}}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');level=Number(b.dataset.level);render();if(lists[level][0])selectWord(lists[level][0],false)});
+$('search').oninput=render;$('stopBtn').onclick=()=>speechSynthesis.cancel();$('replayBtn').onclick=replay;$('loadBtn').onclick=loadLists;$('cacheBtn').onclick=cacheAll;
+function boot(){loadLists().catch(()=>{})}boot();
+</script></body></html>
