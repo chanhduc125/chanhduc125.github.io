@@ -22,6 +22,7 @@ button,input{font:inherit}button{border:0;border-radius:10px;padding:10px 13px;b
 .searchrow{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px}.searchrow input{flex:1;min-width:200px;padding:11px;border:1px solid var(--line);border-radius:10px}
 .wordgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(96px,auto);gap:9px;padding:2px}
 .pagination{display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;margin:-5px 0 14px;padding:7px 10px;background:#fff;border:1px solid var(--line);border-radius:12px;min-height:42px}
+.pagination-bottom{margin:14px 0 0}
 .page-btn{min-width:30px;height:30px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#35506f;font-size:12px;font-weight:650;line-height:1}
 .page-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
 .page-btn:disabled{opacity:.35;cursor:default}
@@ -62,6 +63,7 @@ footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);
 }
 @media(max-width:480px){
  .pagination{margin:-3px 0 10px;padding:6px 5px;gap:4px;min-height:40px}.page-btn{min-width:29px;height:32px;padding:4px 7px}
+ .pagination-bottom{margin:12px 0 0}
  header{padding:17px 14px}header h1{font-size:22px;line-height:1.3}header p{font-size:13px}
  main{margin:12px auto;padding:0 10px}footer{padding:0 12px 22px}
  .toolbar{gap:7px}.toolbar button{min-height:44px;flex:1 1 calc(50% - 7px);padding:10px 8px;font-size:13px}.toolbar #overall{flex-basis:100%}
@@ -98,7 +100,7 @@ footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);
 <section class="panel">
 <div class="searchrow"><input id="search" placeholder="Tìm chữ Hán, Pinyin, nghĩa tiếng Anh hoặc tiếng Việt…"><span id="counter" class="status"></span></div>
 <div id="words" class="wordgrid"></div>
-<div class="notice">Nghĩa tiếng Việt lấy từ CVDICT, đối chiếu cả chữ Hán và Pinyin; chỉ hiển thị tối đa 3 nghĩa ngắn, tránh nhầm từ đồng hình khác cách đọc. Nếu không khớp chính xác, ứng dụng sẽ báo chưa có nghĩa thay vì đoán.</div>
+<div id="wordPaginationBottom" class="pagination pagination-bottom" aria-label="Chọn trang tiếp theo ở cuối danh sách từ vựng HSK"></div>
 </section>
 <aside class="panel preview">
 <div class="preview-head"><b>Nghe & luyện viết</b><span class="status">Chạm từ để nghe và luyện viết</span></div>
@@ -222,9 +224,9 @@ function render(){
  });
 }
 function renderPagination(pageCount,total){
- const host=$('wordPagination');
- if(!host)return;
- if(total<=PAGE_SIZE){host.innerHTML='';return;}
+ const hosts=[$('wordPagination'),$('wordPaginationBottom')].filter(Boolean);
+ if(!hosts.length)return;
+ if(total<=PAGE_SIZE){hosts.forEach(host=>host.innerHTML='');return;}
  let sequence=[];
  if(pageCount<=7){sequence=Array.from({length:pageCount},(_,i)=>i+1)}
  else{
@@ -233,18 +235,23 @@ function renderPagination(pageCount,total){
   for(let i=0;i<sorted.length;i++){if(i&&sorted[i]-sorted[i-1]>1)sequence.push('…');sequence.push(sorted[i]);}
  }
  const btn=(label,page,disabled=false,active=false,aria='')=>`<button type="button" class="page-btn${active?' active':''}" data-page="${page}" ${disabled?'disabled':''} ${aria?`aria-label="${aria}"`:''} ${active?'aria-current="page"':''}>${label}</button>`;
- host.innerHTML=btn('‹',currentPage-1,currentPage===1,false,'Trang trước')+
+ const markup=btn('‹',currentPage-1,currentPage===1,false,'Trang trước')+
   sequence.map(n=>n==='…'?'<span class="page-ellipsis">…</span>':btn(n,n,false,n===currentPage,`Trang ${n}`)).join('')+
   btn('›',currentPage+1,currentPage===pageCount,false,'Trang sau')+
   `<span class="page-summary">HSK ${level} · Trang ${currentPage}/${pageCount}</span>`;
- host.querySelectorAll('button[data-page]').forEach(b=>b.addEventListener('click',()=>{
-  if(b.disabled)return;
-  const next=Number(b.dataset.page);if(!Number.isInteger(next)||next<1||next>pageCount)return;
-  currentPage=next;pageByLevel[level]=next;closeExample();render();
-  host.scrollIntoView({behavior:'smooth',block:'nearest'});
- }));
+ hosts.forEach(host=>{
+  host.innerHTML=markup;
+  host.querySelectorAll('button[data-page]').forEach(b=>b.addEventListener('click',()=>{
+   if(b.disabled)return;
+   const next=Number(b.dataset.page);if(!Number.isInteger(next)||next<1||next>pageCount)return;
+   currentPage=next;pageByLevel[level]=next;closeExample();render();
+   // Luôn đưa người học về thanh phân trang phía trên để bắt đầu đọc trang mới.
+   requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    $('wordPagination').scrollIntoView({behavior:'smooth',block:'start'});
+   }));
+  }));
+ });
 }
-
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function loadWriter(){if(window.HanziWriter)return;let code=await getStore('cache','writer-js');if(!code){let r=await fetch(WRITER);if(!r.ok)throw Error('Không tải được Hanzi Writer');code=await r.text();await putStore('cache','writer-js',code)}let blob=new Blob([code],{type:'text/javascript'}),url=URL.createObjectURL(blob);await new Promise((res,rej)=>{let s=document.createElement('script');s.src=url;s.onload=res;s.onerror=rej;document.head.appendChild(s)});writerReady=!!window.HanziWriter}
 async function getChar(char){let cached=await getStore('chars',char);if(cached)return cached;let r=await fetch(CHARBASE+encodeURIComponent(char)+'.json');if(!r.ok)throw Error('Thiếu dữ liệu nét: '+char);let data=await r.json();await putStore('chars',char,data);return data}
