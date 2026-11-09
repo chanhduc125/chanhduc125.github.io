@@ -39,7 +39,7 @@ button,input{font:inherit}button{border:0;border-radius:10px;padding:10px 13px;b
 .example-tip.show{display:block}
 .example-zh{font-size:18px;line-height:1.7;font-weight:650;cursor:help}.example-zh .hit{color:#c00018;font-size:1.18em;font-weight:900}
 .example-pinyin{margin-top:6px;color:#2764d8;font-size:13px;line-height:1.5}
-.example-en{margin-top:6px;color:#6b778a;font-size:12px}
+.example-en{margin-top:6px;color:#6b778a;font-size:12px}.example-vi{margin-top:5px;color:#14845d;font-size:13px;font-weight:650;line-height:1.5}
 .example-audio{display:none}.tip-close{display:none}
 @media(max-width:820px){.example-tip{width:min(330px,calc(100vw - 20px))}}
 
@@ -76,7 +76,7 @@ footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);
  .notice{font-size:12px}
 }
 </style></head><body>
-<header><h1>汉语 HSK 2.0 · Học từ vựng & thứ tự nét</h1><p>HSK 1–4 · Rê hoặc chạm ngôi sao để xem câu ví dụ; chạm câu để nghe đọc</p></header>
+<header><h1>汉语 HSK 2.0 · Học từ vựng & thứ tự nét</h1><p>HSK 1–6 · Rê hoặc chạm ngôi sao để xem câu ví dụ; chạm câu để nghe đọc</p></header>
 <main>
 <div class="toolbar">
 <button class="primary" id="loadBtn">☁ Tải dữ liệu từ vựng</button>
@@ -89,6 +89,8 @@ footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);
 <button class="tab" data-level="2">HSK 2<small>150 từ</small></button>
 <button class="tab" data-level="3">HSK 3<small>300 từ</small></button>
 <button class="tab" data-level="4">HSK 4<small>598 từ</small></button>
+<button class="tab" data-level="5">HSK 5<small>1.300 từ</small></button>
+<button class="tab" data-level="6">HSK 6<small>2.500 từ</small></button>
 <button class="tab" data-tab="stats">📊 Thống kê</button>
 </nav>
 <div id="wordPagination" class="pagination" aria-label="Chọn trang từ vựng HSK đang chọn"></div>
@@ -121,16 +123,17 @@ footer{max-width:1220px;margin:20px auto;padding:0 16px 25px;color:var(--muted);
 
 </main>
 <div id="exampleTip" class="example-tip" role="tooltip"></div>
-<footer>Ứng dụng lưu danh sách từ, câu ví dụ, thư viện Pinyin và dữ liệu nét trong IndexedDB. Hãy tải dữ liệu một lần khi có Internet rồi bấm “Lưu dữ liệu nét & ví dụ offline”. Nguồn từ vựng: clem109/hsk-vocabulary (MIT); nghĩa tiếng Việt: CVDICT (CC BY-SA 4.0; bản dịch tham khảo từ CC-CEDICT, có thể còn mục cần rà soát); câu ví dụ: <a href="https://github.com/no7z/hsk-sentences-audio" target="_blank" rel="noopener">no7z/hsk-sentences-audio</a> (CC BY-SA 4.0, HSK 3.0), chọn câu có gắn nhãn đúng từ đang học; không tự ghép câu khuôn; thư viện nét: Hanzi Writer / Make Me a Hanzi.</footer>
+<footer>Ứng dụng lưu danh sách từ, câu ví dụ, thư viện Pinyin và dữ liệu nét trong IndexedDB. Hãy tải dữ liệu một lần khi có Internet rồi bấm “Lưu dữ liệu nét & ví dụ offline”. Nguồn từ vựng: clem109/hsk-vocabulary (MIT; cấp 1–6, HSK 5 có 1.300 mục từ và HSK 6 có 2.500 mục từ trong bộ dữ liệu này); nghĩa tiếng Việt: CVDICT (CC BY-SA 4.0; bản dịch tham khảo từ CC-CEDICT, có thể còn mục cần rà soát); câu ví dụ: <a href="https://github.com/no7z/hsk-sentences-audio" target="_blank" rel="noopener">no7z/hsk-sentences-audio</a> (CC BY-SA 4.0, HSK 3.0), chọn câu có gắn nhãn đúng từ đang học; không tự ghép câu khuôn; thư viện nét: Hanzi Writer / Make Me a Hanzi.</footer>
 <script>
-const URLS={1:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-1.json',2:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-2.json',3:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-3.json',4:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-4.json'};
+const URLS={1:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-1.json',2:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-2.json',3:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-3.json',4:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-4.json',5:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-5.json',6:'https://raw.githubusercontent.com/clem109/hsk-vocabulary/master/hsk-vocab-json/hsk-level-6.json'};
 const PINYIN_MODULE='https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js';
 const CHARBASE='https://raw.githubusercontent.com/chanind/hanzi-writer-data/master/data/';
 const CVDICT_URL='https://raw.githubusercontent.com/ph0ngp/CVDICT/main/CVDICT.u8';
 const SENTENCE_CORPUS_URL='https://raw.githubusercontent.com/no7z/hsk-sentences-audio/main/dist/sentences.json';
+const SENTENCE_VI_API='https://api.mymemory.translated.net/get';
 const WRITER='https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.3/dist/hanzi-writer.min.js';
-let lists={1:[],2:[],3:[],4:[]},level=1,selected=null,writerReady=false,animationSpeed=0.6,animationRunId=0,hoverTimer=null,lastSpoken='',pinyinFn=null,tipTimer=null,tipWord=null,viDictionary=null,exampleMap=null,exampleCorpusPromise=null,currentPage=1;
-const pageByLevel={1:1,2:1,3:1,4:1};
+let lists={1:[],2:[],3:[],4:[],5:[],6:[]},level=1,selected=null,writerReady=false,animationSpeed=0.6,animationRunId=0,hoverTimer=null,lastSpoken='',pinyinFn=null,tipTimer=null,tipWord=null,viDictionary=null,exampleMap=null,exampleCorpusPromise=null,currentPage=1;
+const pageByLevel={1:1,2:1,3:1,4:1,5:1,6:1};
 const PAGE_SIZE=20;
 const $=id=>document.getElementById(id);
 function db(){return new Promise((resolve,reject)=>{let r=indexedDB.open('hsk-offline-v3',1);r.onupgradeneeded=()=>{let d=r.result;for(let s of ['cache','chars'])if(!d.objectStoreNames.contains(s))d.createObjectStore(s)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
@@ -152,45 +155,46 @@ function cleanVietnameseSenses(raw){
  return out;
 }
 async function loadVietnameseMeanings(){
- if(viDictionary)return;
- let raw=await getStore('cache','cvdict-text');
- if(!raw){let r=await fetch(CVDICT_URL);if(!r.ok)throw Error('Không tải được từ điển tiếng Việt CVDICT');raw=await r.text();await putStore('cache','cvdict-text',raw)}
- // Mỗi mục từ được khóa bằng chữ giản thể + Pinyin để tránh nhầm các từ đồng hình/khác cách đọc.
- const index=new Map();
- for(const line of raw.split(/\r?\n/)){
-  if(!line||line[0]==='#')continue;
-  const m=line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.*)\/$/);
-  if(!m)continue;
-  const traditional=m[1],simplified=m[2],py=normalizePinyinKey(m[3]),senses=cleanVietnameseSenses(m[4]);
-  if(!py||!senses.length)continue;
-  for(const word of new Set([simplified,traditional])){
-   const key=word+'|'+py;
-   if(!index.has(key))index.set(key,[]);
-   const list=index.get(key);
-   for(const sense of senses){
-    const normalized=sense.toLocaleLowerCase('vi').replace(/[\s,.;:()\-]/g,'');
-    if(!list.some(x=>x.toLocaleLowerCase('vi').replace(/[\s,.;:()\-]/g,'')===normalized))list.push(sense);
-    if(list.length>=3)break;
+ if(!viDictionary){
+  let raw=await getStore('cache','cvdict-text');
+  if(!raw){let r=await fetch(CVDICT_URL);if(!r.ok)throw Error('Không tải được từ điển tiếng Việt CVDICT');raw=await r.text();await putStore('cache','cvdict-text',raw)}
+  // Mỗi mục từ được khóa bằng chữ giản thể + Pinyin để tránh nhầm từ đồng hình khác cách đọc.
+  const index=new Map();
+  for(const line of raw.split(/\r?\n/)){
+   if(!line||line[0]==='#')continue;
+   const m=line.match(/^(\S+)\s+(\S+)\s+\[([^\]]+)\]\s+\/(.*)\/$/);
+   if(!m)continue;
+   const traditional=m[1],simplified=m[2],py=normalizePinyinKey(m[3]),senses=cleanVietnameseSenses(m[4]);
+   if(!py||!senses.length)continue;
+   for(const word of new Set([simplified,traditional])){
+    const key=word+'|'+py;
+    if(!index.has(key))index.set(key,[]);
+    const list=index.get(key);
+    for(const sense of senses){
+     const normalized=sense.toLocaleLowerCase('vi').replace(/[\s,.;:()\-]/g,'');
+     if(!list.some(x=>x.toLocaleLowerCase('vi').replace(/[\s,.;:()\-]/g,'')===normalized))list.push(sense);
+     if(list.length>=3)break;
+    }
    }
   }
+  viDictionary=index;
  }
- viDictionary=index;
- for(const lv of [1,2,3,4])for(const w of lists[lv]){
+ // Áp nghĩa cho toàn bộ cấp độ đã tải; HSK5/6 có thể được nạp sau khi từ điển đã khởi tạo.
+ for(const lv of [1,2,3,4,5,6])for(const w of lists[lv]){
   const readings=String(w.pinyin||'').split(/[;,，、/]/).map(normalizePinyinKey).filter(Boolean);
   let senses=[];
   for(const py of readings){senses=viDictionary.get(w.hanzi+'|'+py)||[];if(senses.length)break;}
-  // Không dò ngược chữ hoặc lấy nghĩa của phát âm khác; thà báo thiếu nghĩa còn hơn hiển thị sai.
   w.meaningVi=senses.slice(0,3).join(' · ')||'Chưa có nghĩa tiếng Việt khớp chính xác';
  }
- for(const lv of [1,2,3,4])await putStore('cache','vocab-'+lv,lists[lv]);
+ for(const lv of [1,2,3,4,5,6])if(lists[lv].length)await putStore('cache','vocab-'+lv,lists[lv]);
 }
 
 function normalize(raw,lv){return raw.map((x,i)=>({id:`${lv}-${i}`,level:lv,hanzi:x.hanzi||x.simplified||'',pinyin:x.pinyin||x.transcription||'',meaning:(x.translations||x.meanings||[]).slice(0,3).join('; '),meaningVi:x.meaningVi||x.vietnamese||'',pos:x.pos||'',examples:x.examples||[]})).filter(x=>x.hanzi)}
 async function loadLists(){
- $('loadBtn').disabled=true;$('overall').textContent='Đang tải dữ liệu HSK 2.0 cấp 1–4…';
+ $('loadBtn').disabled=true;$('overall').textContent='Đang tải dữ liệu HSK 2.0 cấp 1–6…';
  try{
-  for(let lv=1;lv<=4;lv++){let cached=await getStore('cache','vocab-'+lv);if(cached)lists[lv]=cached;else{let raw=await fetchJSON(URLS[lv]);lists[lv]=normalize(raw,lv);await putStore('cache','vocab-'+lv,lists[lv])}}
-  $('overall').textContent=`Đã tải HSK 1–4: ${[1,2,3,4].map(l=>lists[l].length).join(' + ')} = ${[1,2,3,4].reduce((n,l)=>n+lists[l].length,0)} mục từ.`;
+  for(let lv=1;lv<=6;lv++){let cached=await getStore('cache','vocab-'+lv);if(cached)lists[lv]=cached;else{let raw=await fetchJSON(URLS[lv]);lists[lv]=normalize(raw,lv);await putStore('cache','vocab-'+lv,lists[lv])}}
+  $('overall').textContent=`Đã tải HSK 1–6: ${[1,2,3,4,5,6].map(l=>lists[l].length).join(' + ')} = ${[1,2,3,4,5,6].reduce((n,l)=>n+lists[l].length,0)} mục từ.`;
   render();loadVietnameseMeanings().then(()=>{render();if(selected)selectWord(selected,false)}).catch(e=>{$('overall').textContent='Đã tải từ vựng nhưng chưa tải được từ điển tiếng Việt: '+e.message});if(!selected&&lists[1][0])selectWord(lists[1][0],false);
  }catch(e){$('overall').textContent='Không tải được dữ liệu. Kiểm tra kết nối Internet rồi thử lại. ('+e.message+')'}
  finally{$('loadBtn').disabled=false}
@@ -289,20 +293,31 @@ function findTokenOffset(sentence,word){
  return zh.indexOf(word);
 }
 function buildUniqueExampleMap(corpus){
- const all=[1,2,3,4].flatMap(l=>lists[l]),candidates=new Map();
+ const all=[1,2,3,4,5,6].flatMap(l=>lists[l]),sentenceIndex=new Map();
+ // Index sentences by exact segmented token once. This keeps HSK5/6 responsive.
+ for(const sentence of corpus){
+  const zh=sentence.chinese||sentence.zh||'';
+  if(!zh||[...zh].length<5||[...zh].length>55)continue;
+  const seenTokens=new Set();
+  for(const token of getSentenceTokens(sentence)){
+   const word=token.word;
+   if(!word||seenTokens.has(word))continue;
+   seenTokens.add(word);
+   if(!sentenceIndex.has(word))sentenceIndex.set(word,[]);
+   sentenceIndex.get(word).push({sentence,token});
+  }
+ }
+ const candidates=new Map();
  for(const w of all){
   const found=[];
-  for(const sentence of corpus){
-   const zh=sentence.chinese||sentence.zh||'';
-   if(!zh||!zh.includes(w.hanzi)||[...zh].length<5||[...zh].length>55)continue;
-   const token=getSentenceTokens(sentence).find(t=>t.word===w.hanzi);
-   // Chỉ nhận câu khi từ xuất hiện như một đơn vị từ vựng, không ghép nhầm chữ nằm trong từ khác.
-   if(!token)continue;
-   found.push({sentence,score:sentenceScore(sentence,w,token)});
+  for(const item of sentenceIndex.get(w.hanzi)||[]){
+   const zh=item.sentence.chinese||item.sentence.zh||'';
+   if(!zh.includes(w.hanzi))continue;
+   found.push({sentence:item.sentence,token:item.token,score:sentenceScore(item.sentence,w,item.token)});
   }
   candidates.set(w.id,found.sort((a,b)=>b.score-a.score));
  }
- // Phân câu cho những từ ít lựa chọn trước; mỗi câu chỉ được dùng cho một từ.
+ // Allocate scarce examples first; one sentence is assigned to at most one HSK word.
  const ordered=[...all].sort((a,b)=>(candidates.get(a.id).length-candidates.get(b.id).length)||(a.level-b.level));
  const used=new Set(),assigned=new Map();
  for(const w of ordered){
@@ -313,7 +328,7 @@ function buildUniqueExampleMap(corpus){
   used.add(key);
   assigned.set(w.id,{zh,start:findTokenOffset(sentence,w.hanzi),pinyin:sentence.pinyin||'',en:sentenceTranslation(sentence,'en'),vi:sentenceTranslation(sentence,'vi'),source:'HSK-graded sentence corpus'});
  }
- // Nếu bộ câu chính không có câu cho từ này, dùng ví dụ gốc đi kèm mục từ; không tự tạo câu khuôn.
+ // Use bundled examples only when no exact-token corpus sentence exists.
  for(const w of all){
   if(assigned.has(w.id))continue;
   const fallback=sourceExampleCandidates(w).sort((a,b)=>Math.abs([...a.zh].length-18)-Math.abs([...b.zh].length-18));
@@ -358,6 +373,25 @@ function bindTipControls(tip){
  if(close)close.onclick=e=>{e.stopPropagation();closeExample()};
 }
 function closeExample(){clearTimeout(tipTimer);$('exampleTip').classList.remove('show');tipWord=null;document.querySelectorAll('.star-btn[aria-expanded="true"]').forEach(b=>b.setAttribute('aria-expanded','false'))}
+async function translateExampleToVietnamese(ex){
+ if(ex.vi&&String(ex.vi).trim())return String(ex.vi).trim();
+ const source=String(ex.en||'').trim();
+ if(!source)return '';
+ const cacheKey='sentence-vi-v1:'+source;
+ const cached=await getStore('cache',cacheKey);
+ if(cached)return cached;
+ const params=new URLSearchParams({q:source,langpair:'en|vi'});
+ const response=await fetch(`${SENTENCE_VI_API}?${params.toString()}`);
+ if(!response.ok)throw Error(`Dịch nghĩa tiếng Việt lỗi HTTP ${response.status}`);
+ const data=await response.json();
+ if(Number(data.responseStatus)!==200)throw Error(data.responseDetails||'Dịch vụ chưa trả được bản dịch');
+ let translated=String(data.responseData?.translatedText||'').trim();
+ // Chuẩn hóa HTML entity từ dịch vụ trước khi đưa lên giao diện.
+ const decoder=document.createElement('textarea');decoder.innerHTML=translated;translated=decoder.value.replace(/<[^>]*>/g,'').trim();
+ if(!translated||translated.toLowerCase()===source.toLowerCase())throw Error('Chưa có bản dịch tiếng Việt phù hợp');
+ await putStore('cache',cacheKey,translated);
+ return translated;
+}
 async function showExample(w,anchor){
  clearTimeout(tipTimer);tipWord=w;const tip=$('exampleTip');
  tip.innerHTML=`<button class="tip-close" type="button" aria-label="Đóng câu ví dụ">×</button><div class="example-zh">Đang tìm một câu ví dụ đúng ngữ cảnh cho <span class="hit">${esc(w.hanzi)}</span>…</div><div class="example-pinyin">Đang tải dữ liệu câu ví dụ lần đầu.</div>`;
@@ -375,13 +409,20 @@ async function showExample(w,anchor){
   const ex=await exampleFor(w);
   if(tipWord!==w||!tip.classList.contains('show'))return;
   if(!ex){tip.innerHTML=`<button class="tip-close" type="button" aria-label="Đóng câu ví dụ">×</button><div class="example-zh">Chưa tìm được câu phù hợp cho <span class="hit">${esc(w.hanzi)}</span>.</div><div class="example-pinyin">Mình không hiển thị câu mẫu chung để tránh làm bạn học sai nghĩa.</div>`;bindTipControls(tip);return}
-  tip.innerHTML=`<button class="tip-close" type="button" aria-label="Đóng câu ví dụ">×</button><div class="example-zh" title="Chạm hoặc rê vào câu để nghe đọc">${highlightWord(ex.zh,w.hanzi,ex.start)}</div><div class="example-pinyin" id="tipPinyin">${esc(ex.pinyin||'Đang tạo Pinyin…')}</div>${ex.vi?`<div class="example-en" style="color:#14845d;font-size:13px">${esc(ex.vi)}</div>`:''}${ex.en?`<div class="example-en">${esc(ex.en)}</div>`:''}`;
+  tip.innerHTML=`<button class="tip-close" type="button" aria-label="Đóng câu ví dụ">×</button><div class="example-zh" title="Chạm hoặc rê vào câu để nghe đọc">${highlightWord(ex.zh,w.hanzi,ex.start)}</div><div class="example-pinyin" id="tipPinyin">${esc(ex.pinyin||'Đang tạo Pinyin…')}</div>${ex.en?`<div class="example-en"><b>EN:</b> ${esc(ex.en)}</div>`:''}<div class="example-vi" id="tipVietnamese"><b>VI:</b> ${ex.vi?esc(ex.vi):'Đang tải nghĩa tiếng Việt…'}</div>`;
   bindTipControls(tip);
   const sentence=tip.querySelector('.example-zh');
   // Máy tính: tự đọc khi rê chuột. Điện thoại: chạm câu để phát âm.
   sentence.addEventListener('pointerenter',()=>{if(window.matchMedia('(hover: hover) and (pointer: fine)').matches&&lastSpoken!==ex.zh)speak(ex.zh)});
   sentence.addEventListener('click',e=>{e.stopPropagation();speak(ex.zh)});
   position();
+  if(!ex.vi){
+   translateExampleToVietnamese(ex).then(vi=>{
+    if(tipWord===w&&tip.classList.contains('show'))$('tipVietnamese').innerHTML='<b>VI:</b> '+esc(vi);
+   }).catch(()=>{
+    if(tipWord===w&&tip.classList.contains('show'))$('tipVietnamese').innerHTML='<b>VI:</b> Chưa tải được bản dịch. Kết nối Internet rồi rê/chạm lại vào ngôi sao.';
+   });
+  }
   if(!ex.pinyin){try{let py=await getPinyinFn();let result=py(ex.zh,{toneType:'symbol',type:'string'});if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent=result;ex.pinyin=result;}catch(e){if(tipWord===w&&tip.classList.contains('show'))$('tipPinyin').textContent='Pinyin chưa tải được; hãy thử khi có Internet.'}}
  }catch(e){
   if(tipWord===w&&tip.classList.contains('show')){tip.innerHTML=`<button class="tip-close" type="button" aria-label="Đóng câu ví dụ">×</button><div class="example-zh">Chưa tải được câu ví dụ cho <span class="hit">${esc(w.hanzi)}</span>.</div><div class="example-pinyin">Hãy kết nối Internet và chạm lại vào ngôi sao. Sau khi tải, câu sẽ được lưu để dùng offline.</div>`;bindTipControls(tip)}
@@ -438,7 +479,7 @@ async function selectWord(w,autoSpeak=true){
  }
 }
 function replay(){if(!selected)return;selectWord(selected,false)}
-async function cacheAll(){if(!lists[1].length){await loadLists()}let exampleInfo='';try{const examples=await loadSentenceExamples(),total=[1,2,3,4].reduce((n,l)=>n+lists[l].length,0);exampleInfo=` · Câu ví dụ: ${examples.size}/${total} từ`}catch(e){exampleInfo=' · Chưa tải được bộ câu ví dụ'}let chars=[...new Set([1,2,3,4].flatMap(l=>lists[l].flatMap(w=>[...w.hanzi])).filter(c=>/\p{Script=Han}/u.test(c)))];$('cacheBtn').disabled=true;try{await loadWriter();await getPinyinFn();let done=0,failed=[];for(let i=0;i<chars.length;i+=5){await Promise.all(chars.slice(i,i+5).map(async c=>{try{await getChar(c)}catch(e){failed.push(c)}finally{done++}}));$('overall').textContent=`Đang lưu dữ liệu nét: ${done}/${chars.length}`}$('overall').textContent=`Đã lưu ${done-failed.length}/${chars.length} ký tự nét vào máy.${failed.length?' Thiếu: '+failed.join(' '):' Có thể học offline.'}${exampleInfo}`}catch(e){$('overall').textContent='Không thể lưu: '+e.message}finally{$('cacheBtn').disabled=false}}
+async function cacheAll(){if(!lists[1].length){await loadLists()}let exampleInfo='';try{const examples=await loadSentenceExamples(),total=[1,2,3,4,5,6].reduce((n,l)=>n+lists[l].length,0);exampleInfo=` · Câu ví dụ: ${examples.size}/${total} từ`}catch(e){exampleInfo=' · Chưa tải được bộ câu ví dụ'}let chars=[...new Set([1,2,3,4,5,6].flatMap(l=>lists[l].flatMap(w=>[...w.hanzi])).filter(c=>/\p{Script=Han}/u.test(c)))];$('cacheBtn').disabled=true;try{await loadWriter();await getPinyinFn();let done=0,failed=[];for(let i=0;i<chars.length;i+=5){await Promise.all(chars.slice(i,i+5).map(async c=>{try{await getChar(c)}catch(e){failed.push(c)}finally{done++}}));$('overall').textContent=`Đang lưu dữ liệu nét: ${done}/${chars.length}`}$('overall').textContent=`Đã lưu ${done-failed.length}/${chars.length} ký tự nét vào máy.${failed.length?' Thiếu: '+failed.join(' '):' Có thể học offline.'}${exampleInfo}`}catch(e){$('overall').textContent='Không thể lưu: '+e.message}finally{$('cacheBtn').disabled=false}}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
  b.classList.add('active');
