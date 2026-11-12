@@ -134,10 +134,36 @@ const CVDICT_URL='https://raw.githubusercontent.com/ph0ngp/CVDICT/main/CVDICT.u8
 const SENTENCE_CORPUS_URL='https://raw.githubusercontent.com/no7z/hsk-sentences-audio/main/dist/sentences.json';
 const SENTENCE_VI_API='https://api.mymemory.translated.net/get';
 const WRITER='https://cdn.jsdelivr.net/npm/hanzi-writer@3.7.3/dist/hanzi-writer.min.js';
-let lists={1:[],2:[],3:[],4:[],5:[],6:[]},level=1,selected=null,writerReady=false,animationSpeed=0.6,animationRunId=0,hoverTimer=null,lastSpoken='',pinyinFn=null,tipTimer=null,tipWord=null,viDictionary=null,exampleMap=null,exampleCorpusPromise=null,currentPage=1;
-const pageByLevel={1:1,2:1,3:1,4:1,5:1,6:1};
+const STUDY_POSITION_KEY='hsk-study-position-v1';
+function readSavedStudyPosition(){
+ try{
+  const value=JSON.parse(localStorage.getItem(STUDY_POSITION_KEY)||'null');
+  if(!value||typeof value!=='object')return null;
+  const savedLevel=Number(value.level);
+  const pages={1:1,2:1,3:1,4:1,5:1,6:1};
+  for(const lv of [1,2,3,4,5,6]){
+   const page=Number(value.pages?.[lv]);
+   if(Number.isInteger(page)&&page>0)pages[lv]=page;
+  }
+  return {level:[1,2,3,4,5,6].includes(savedLevel)?savedLevel:1,pages,wordIds:value.wordIds&&typeof value.wordIds==='object'?value.wordIds:{}};
+ }catch(e){return null}
+}
+const restoredStudyPosition=readSavedStudyPosition();
+let lists={1:[],2:[],3:[],4:[],5:[],6:[]},level=restoredStudyPosition?.level||1,selected=null,writerReady=false,animationSpeed=0.6,animationRunId=0,hoverTimer=null,lastSpoken='',pinyinFn=null,tipTimer=null,tipWord=null,viDictionary=null,exampleMap=null,exampleCorpusPromise=null,currentPage=1;
+const pageByLevel={...(restoredStudyPosition?.pages||{1:1,2:1,3:1,4:1,5:1,6:1})};
+const lastWordByLevel={...(restoredStudyPosition?.wordIds||{})};
 const PAGE_SIZE=20;
 const $=id=>document.getElementById(id);
+function saveStudyPosition(wordId){
+ try{
+  if(wordId!==undefined)lastWordByLevel[level]=wordId;
+  const state={level,pages:pageByLevel,wordIds:lastWordByLevel,updatedAt:Date.now()};
+  localStorage.setItem(STUDY_POSITION_KEY,JSON.stringify(state));
+ }catch(e){/* Private mode or blocked storage: the page still works normally. */}
+}
+function syncActiveTab(){
+ document.querySelectorAll('.tab[data-level]').forEach(b=>b.classList.toggle('active',Number(b.dataset.level)===level));
+}
 function db(){return new Promise((resolve,reject)=>{let r=indexedDB.open('hsk-offline-v3',1);r.onupgradeneeded=()=>{let d=r.result;for(let s of ['cache','chars'])if(!d.objectStoreNames.contains(s))d.createObjectStore(s)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function getStore(store,key){let d=await db();return new Promise((res,rej)=>{let r=d.transaction(store).objectStore(store).get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function putStore(store,key,val){let d=await db();return new Promise((res,rej)=>{let r=d.transaction(store,'readwrite').objectStore(store).put(val,key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
@@ -196,8 +222,20 @@ async function loadLists(){
  $('loadBtn').disabled=true;$('overall').textContent='Đang tải dữ liệu HSK 2.0 cấp 1–6…';
  try{
   for(let lv=1;lv<=6;lv++){let cached=await getStore('cache','vocab-'+lv);if(cached)lists[lv]=cached;else{let raw=await fetchJSON(URLS[lv]);lists[lv]=normalize(raw,lv);await putStore('cache','vocab-'+lv,lists[lv])}}
-  $('overall').textContent=`Đã tải HSK 1–6: ${[1,2,3,4,5,6].map(l=>lists[l].length).join(' + ')} = ${[1,2,3,4,5,6].reduce((n,l)=>n+lists[l].length,0)} mục từ.`;
-  render();loadVietnameseMeanings().then(()=>{render();if(selected)selectWord(selected,false)}).catch(e=>{$('overall').textContent='Đã tải từ vựng nhưng chưa tải được từ điển tiếng Việt: '+e.message});if(!selected&&lists[1][0])selectWord(lists[1][0],false);
+  // Khôi phục cấp HSK và trang học cuối cùng đã lưu trên thiết bị này.
+  level=restoredStudyPosition?.level||level;
+  currentPage=pageByLevel[level]||1;
+  syncActiveTab();
+  $('wordPagination').hidden=false;
+  $('overall').textContent=`Đã tải HSK 1–6: ${[1,2,3,4,5,6].map(l=>lists[l].length).join(' + ')} = ${[1,2,3,4,5,6].reduce((n,l)=>n+lists[l].length,0)} mục từ. Đã khôi phục HSK ${level}, trang ${currentPage}.`;
+  render();
+  const visibleStart=(currentPage-1)*PAGE_SIZE;
+  const visibleWords=lists[level].slice(visibleStart,visibleStart+PAGE_SIZE);
+  const rememberedId=lastWordByLevel[level];
+  const rememberedWord=rememberedId?visibleWords.find(w=>w.id===rememberedId):null;
+  const wordToRestore=rememberedWord||visibleWords[0];
+  if(!selected&&wordToRestore)selectWord(wordToRestore,false);
+  loadVietnameseMeanings().then(()=>{render();if(selected)selectWord(selected,false)}).catch(e=>{$('overall').textContent='Đã tải từ vựng nhưng chưa tải được từ điển tiếng Việt: '+e.message});
  }catch(e){$('overall').textContent='Không tải được dữ liệu. Kiểm tra kết nối Internet rồi thử lại. ('+e.message+')'}
  finally{$('loadBtn').disabled=false}
 }
@@ -207,6 +245,7 @@ function render(){
  const pageCount=Math.max(1,Math.ceil(arr.length/PAGE_SIZE));
  currentPage=Math.min(Math.max(1,pageByLevel[level]||1),pageCount);
  pageByLevel[level]=currentPage;
+ saveStudyPosition();
  const start=(currentPage-1)*PAGE_SIZE,visible=arr.slice(start,start+PAGE_SIZE);
  $('counter').textContent=`${arr.length}/${lists[level].length} từ · ${PAGE_SIZE} từ/trang`;
  renderPagination(pageCount,arr.length);
@@ -244,7 +283,7 @@ function renderPagination(pageCount,total){
   host.querySelectorAll('button[data-page]').forEach(b=>b.addEventListener('click',()=>{
    if(b.disabled)return;
    const next=Number(b.dataset.page);if(!Number.isInteger(next)||next<1||next>pageCount)return;
-   currentPage=next;pageByLevel[level]=next;closeExample();render();
+   currentPage=next;pageByLevel[level]=next;lastWordByLevel[level]=null;saveStudyPosition(null);closeExample();render();
    // Luôn đưa người học về thanh phân trang phía trên để bắt đầu đọc trang mới.
    requestAnimationFrame(()=>requestAnimationFrame(()=>{
     $('wordPagination').scrollIntoView({behavior:'smooth',block:'start'});
@@ -442,6 +481,7 @@ window.addEventListener('resize',()=>{if($('exampleTip').classList.contains('sho
 
 async function selectWord(w,autoSpeak=true){
  if(!w)return;
+ saveStudyPosition(w.id);
  selected=w;
  const runId=++animationRunId;
  $('previewWord').textContent=w.hanzi;
@@ -492,12 +532,16 @@ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
  b.classList.add('active');
  const study=$('studyLayout'),stats=$('statsPanel');
  if(b.dataset.level){
-  stats.hidden=true;study.hidden=false;$('wordPagination').hidden=false;level=Number(b.dataset.level);currentPage=pageByLevel[level]||1;render();if(lists[level][0])selectWord(lists[level][0],false);
+  stats.hidden=true;study.hidden=false;$('wordPagination').hidden=false;level=Number(b.dataset.level);currentPage=pageByLevel[level]||1;saveStudyPosition();render();
+  const start=(currentPage-1)*PAGE_SIZE;const q=$('search').value.trim().toLowerCase();const visible=lists[level].filter(w=>!q||[w.hanzi,w.pinyin,w.meaning,w.meaningVi].join(' ').toLowerCase().includes(q)).slice(start,start+PAGE_SIZE);if(visible[0])selectWord(visible[0],false);
  }else if(b.dataset.tab==='stats'){
+  saveStudyPosition();
   study.hidden=true;$('wordPagination').hidden=true;stats.hidden=false;
   const frame=$('statsFrame');if(!frame.getAttribute('src'))frame.src=frame.dataset.src;
  }
 });
-$('search').oninput=()=>{currentPage=1;pageByLevel[level]=1;closeExample();render()};$('stopBtn').onclick=()=>speechSynthesis.cancel();$('replayBtn').onclick=replay;document.querySelectorAll('.speed-option').forEach(btn=>btn.onclick=()=>{const next=Number(btn.dataset.speed);if(![0.6,0.8,1].includes(next))return;animationSpeed=next;document.querySelectorAll('.speed-option').forEach(b=>{const active=b===btn;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});if(selected)selectWord(selected,false);});$('loadBtn').onclick=loadLists;$('cacheBtn').onclick=cacheAll;
-function boot(){loadLists().catch(()=>{})}boot();
+$('search').oninput=()=>{currentPage=1;pageByLevel[level]=1;lastWordByLevel[level]=null;saveStudyPosition(null);closeExample();render()};$('stopBtn').onclick=()=>speechSynthesis.cancel();$('replayBtn').onclick=replay;document.querySelectorAll('.speed-option').forEach(btn=>btn.onclick=()=>{const next=Number(btn.dataset.speed);if(![0.6,0.8,1].includes(next))return;animationSpeed=next;document.querySelectorAll('.speed-option').forEach(b=>{const active=b===btn;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});if(selected)selectWord(selected,false);});$('loadBtn').onclick=loadLists;$('cacheBtn').onclick=cacheAll;
+window.addEventListener('pagehide',()=>saveStudyPosition());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveStudyPosition()});
+function boot(){syncActiveTab();loadLists().catch(()=>{})}boot();
 </script></body></html>
